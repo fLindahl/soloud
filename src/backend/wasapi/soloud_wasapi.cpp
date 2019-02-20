@@ -164,11 +164,40 @@ namespace SoLoud
         format.wBitsPerSample = sizeof(short)*8;
         format.nBlockAlign = (format.nChannels*format.wBitsPerSample)/8;
         format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
-        REFERENCE_TIME dur = static_cast<REFERENCE_TIME>(static_cast<double>(aBuffer)
-                                           / (static_cast<double>(aSamplerate)*(1.0/10000000.0)));
-		HRESULT res = data->audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
+        
+		WAVEFORMATEX* ppClosestMatch = nullptr;
+
+		HRESULT res = data->audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED,
+			&format, &ppClosestMatch);
+
+		if (res == S_FALSE)
+		{
+			// Recalculate format with supported sample rate and try again
+			aSamplerate = ppClosestMatch->nSamplesPerSec;
+			format.nSamplesPerSec = aSamplerate;
+			format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
+
+			// update buffer size to new samplerate
+			if (aSamplerate == 44100)
+				aBuffer = 2048;
+		}
+		else if (res == AUDCLNT_E_UNSUPPORTED_FORMAT)
+		{
+			return UNKNOWN_ERROR;
+		}
+
+		if (ppClosestMatch != nullptr)
+		{
+			CoTaskMemFree(ppClosestMatch);
+		}
+
+		REFERENCE_TIME dur = static_cast<REFERENCE_TIME>(static_cast<double>(aBuffer)
+			/ (static_cast<double>(aSamplerate)*(1.0 / 10000000.0)));
+
+		res = data->audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
 			AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 			dur, 0, &format, 0);
+		
 		if (FAILED(res)) 
         {
             return UNKNOWN_ERROR;
