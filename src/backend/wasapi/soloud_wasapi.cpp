@@ -176,10 +176,6 @@ namespace SoLoud
 			aSamplerate = ppClosestMatch->nSamplesPerSec;
 			format.nSamplesPerSec = aSamplerate;
 			format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign;
-
-			// update buffer size to new samplerate
-			if (aSamplerate == 44100)
-				aBuffer = 2048;
 		}
 		else if (res == AUDCLNT_E_UNSUPPORTED_FORMAT)
 		{
